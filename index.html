@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>LIVE TV</title>
+  <title>Cloud Phone TV Player</title>
   <style>
     * {
       box-sizing: border-box;
@@ -28,6 +28,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
     }
 
     .header h1 {
@@ -46,8 +47,9 @@
 
     .player-container {
       width: 100%;
-      height: 130px;
+      height: 140px;
       background-color: #000;
+      flex-shrink: 0;
     }
 
     video {
@@ -60,14 +62,18 @@
       flex: 1;
       overflow-y: auto;
       padding: 2px;
+      background-color: #05192d;
     }
 
     .channel-item {
-      padding: 10px;
+      padding: 10px 8px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       font-size: 13px;
       color: #b0c4de;
       cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .channel-item.selected {
@@ -75,13 +81,6 @@
       color: #ffffff;
       font-weight: bold;
       border-left: 4px solid #00d2ff;
-    }
-
-    .status-msg {
-      padding: 15px;
-      font-size: 12px;
-      text-align: center;
-      color: #88a0a0;
     }
 
     .software-keys {
@@ -94,6 +93,7 @@
       border-top: 1px solid #0d2847;
       font-size: 11px;
       color: #00d2ff;
+      flex-shrink: 0;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -109,79 +109,49 @@
       <video id="video-player" controls autoplay playsinline></video>
     </div>
 
-    <div class="channel-list" id="channel-container">
-      <div class="status-msg" id="status">Loading Channel List...</div>
-    </div>
+    <div class="channel-list" id="channel-container"></div>
   </div>
 
   <div class="software-keys">
-    <span>Reload</span>
+    <span>Up/Down</span>
     <span>SELECT</span>
-    <span>Stop</span>
+    <span>Play</span>
   </div>
 
   <script>
-    const ORIGINAL_URL = "https://go.skym3u.top/fqha.m3u";
-    // Using CORS Proxy to bypass blocking
-    const PROXY_URL = "https://corsproxy.io/?" + encodeURIComponent(ORIGINAL_URL);
+    // অ্যাপ থেকে কপি করা সম্পূর্ণ ফুল লিঙ্কগুলো নিচে কোটেশনের (" ") ভেতরে বসিয়ে দিন
+    const channels = [
+      { title: "ATN News", url: "https://FULL_URL_HERE_FOR_ATN_NEWS.m3u8" },
+      { title: "ATN Bangla", url: "https://FULL_URL_HERE_FOR_ATN_BANGLA.m3u8" },
+      { title: "NTV", url: "https://FULL_URL_HERE_FOR_NTV.m3u8" },
+      { title: "Bangla Vision", url: "https://FULL_URL_HERE_FOR_BANGLA_VISION.m3u8" },
+      { title: "SATV", url: "https://FULL_URL_HERE_FOR_SATV.m3u8" },
+      { title: "Channel I HD", url: "https://FULL_URL_HERE_FOR_CHANNEL_I.m3u8" },
+      { title: "Deepto TV HD", url: "https://FULL_URL_HERE_FOR_DEEPTO_TV.m3u8" },
+      { title: "Maasranga TV", url: "https://FULL_URL_HERE_FOR_MAASRANGA.m3u8" },
+      { title: "Channel 9 HD", url: "https://FULL_URL_HERE_FOR_CHANNEL_9.m3u8" },
+      { title: "Nexus TV HD", url: "https://FULL_URL_HERE_FOR_NEXUS_TV.m3u8" },
+      { title: "Ekattor HD", url: "https://FULL_URL_HERE_FOR_EKATTOR.m3u8" },
+      { title: "Bijoy TV", url: "https://FULL_URL_HERE_FOR_BIJOY_TV.m3u8" },
+      { title: "Zee Bangla HD", url: "https://FULL_URL_HERE_FOR_ZEE_BANGLA.m3u8" },
+      { title: "Sony Aath", url: "https://FULL_URL_HERE_FOR_SONY_AATH.m3u8" },
+      { title: "Star Sports 1 HD", url: "https://FULL_URL_HERE_FOR_STAR_SPORTS_1.m3u8" },
+      { title: "Star Sports 2 HD", url: "https://FULL_URL_HERE_FOR_STAR_SPORTS_2.m3u8" },
+      { title: "T Sports HD", url: "https://FULL_URL_HERE_FOR_T_SPORTS.m3u8" }
+    ];
 
-    let channels = [];
     let selectedIndex = 0;
-
     const videoNode = document.getElementById("video-player");
     const containerNode = document.getElementById("channel-container");
-    const statusNode = document.getElementById("status");
     let hls = null;
 
-    async function fetchPlaylist() {
-      statusNode.innerText = "Playlist Fetching...";
-      
-      try {
-        let res = await fetch(PROXY_URL);
-        if(!res.ok) res = await fetch(ORIGINAL_URL); // Fallback to direct
-        
-        const text = await res.text();
-        parseM3U(text);
-      } catch (err) {
-        statusNode.innerText = "Error loading playlist. Check network/URL.";
-      }
-    }
-
-    function parseM3U(content) {
-      const lines = content.split(/\r?\n/);
-      channels = [];
-      let currentTitle = "";
-
-      lines.forEach((line) => {
-        line = line.trim();
-        if (line.startsWith("#EXTINF:")) {
-          const parts = line.split(",");
-          currentTitle = parts[1] ? parts[1].trim() : "Channel";
-        } else if (line && !line.startsWith("#")) {
-          channels.push({
-            title: currentTitle || "Channel " + (channels.length + 1),
-            url: line
-          });
-          currentTitle = "";
-        }
-      });
-
-      renderList();
-    }
-
     function renderList() {
-      if (channels.length === 0) {
-        statusNode.innerText = "No channels found.";
-        return;
-      }
-
       containerNode.innerHTML = "";
       channels.forEach((ch, idx) => {
         const item = document.createElement("div");
         item.className = "channel-item" + (idx === selectedIndex ? " selected" : "");
-        item.innerText = ch.title;
-        
-        // Touch Support
+        item.innerText = (idx + 1) + ". " + ch.title;
+
         item.onclick = () => {
           selectedIndex = idx;
           updateSelection();
@@ -199,7 +169,7 @@
       Array.from(items).forEach((el, i) => {
         if (i === selectedIndex) {
           el.classList.add("selected");
-          el.scrollIntoView({ block: "nearest" });
+          el.scrollIntoView({ block: "nearest", behavior: "smooth" });
         } else {
           el.classList.remove("selected");
         }
@@ -207,7 +177,7 @@
     }
 
     function playChannel(index) {
-      if (!channels[index]) return;
+      if (!channels[index] || !channels[index].url || channels[index].url.includes("FULL_URL_HERE")) return;
       const streamUrl = channels[index].url;
 
       if (Hls.isSupported() && streamUrl.includes(".m3u8")) {
@@ -217,40 +187,31 @@
         hls.attachMedia(videoNode);
         hls.on(Hls.Events.MANIFEST_PARSED, () => videoNode.play());
       } else {
+        if (hls) hls.destroy();
         videoNode.src = streamUrl;
-        videoNode.play().catch(e => console.log("Auto-play error", e));
+        videoNode.play().catch(e => console.log("Playback error", e));
       }
     }
 
-    // Key Navigation Fix for KaiOS / Cloud Phone D-Pad
     document.addEventListener("keydown", (e) => {
       if (channels.length === 0) return;
 
-      switch(e.key) {
-        case "ArrowDown":
-          if (selectedIndex < channels.length - 1) {
-            selectedIndex++;
-            updateSelection();
-          }
-          break;
-
-        case "ArrowUp":
-          if (selectedIndex > 0) {
-            selectedIndex--;
-            updateSelection();
-          }
-          break;
-
-        case "Enter":
-        case "Select":
-        case "SoftLeft":
-        case "5":
-          playChannel(selectedIndex);
-          break;
+      if (e.key === "ArrowDown" || e.keyCode === 40) {
+        if (selectedIndex < channels.length - 1) {
+          selectedIndex++;
+          updateSelection();
+        }
+      } else if (e.key === "ArrowUp" || e.keyCode === 38) {
+        if (selectedIndex > 0) {
+          selectedIndex--;
+          updateSelection();
+        }
+      } else if (e.key === "Enter" || e.keyCode === 13 || e.key === "Select" || e.key === "SoftLeft" || e.key === "5") {
+        playChannel(selectedIndex);
       }
     });
 
-    fetchPlaylist();
+    renderList();
   </script>
 </body>
 </html>
