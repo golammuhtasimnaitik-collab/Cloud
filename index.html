@@ -175,10 +175,10 @@
         }
       });
     }
-
-    function playChannel(index) {
-      if (!channels[index] || !channels[index].url || channels[index].url.includes("FULL_URL_HERE")) return;
-      const streamUrl = channels[index].url;
+function playChannel(index) {
+  if (!channels[index] || !channels[index].url) return;
+  const streamUrl = channels[index].url;
+  // ... বাকি অংশ আগের মতোই থাকবে
 
       if (Hls.isSupported() && streamUrl.includes(".m3u8")) {
         if (hls) hls.destroy();
